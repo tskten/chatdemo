@@ -1,0 +1,51 @@
+body {
+  font-family: sans-serif;
+}
+
+video {
+  max-width: 100%;
+  width: 320px;
+}
+
+#msgframe {
+    width: 400px;
+    height: 500px;
+    overflow-y: scroll;
+    background: lightgrey;
+}
+
+.msgentry {
+    padding: 5px;
+}
+
+.msgnickname {
+    display: inline-block;
+    width: 60px;
+    color: blue;
+}
+
+.msgtime {
+    display: inline-block;
+    color: green;
+}
+
+.msgcontent {
+    padding-left: 10px;
+    width: 360px
+}
+
+#nickname {
+    display: inline-block;
+    text-align: center;
+    width: 60px;
+}
+
+#textinput {
+    width: 279px;
+}
+
+#sendButton {
+    padding-left: 5px;
+    padding-right: 5px;
+    width: 50px;
+}
