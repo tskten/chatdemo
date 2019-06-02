@@ -13,12 +13,17 @@ const configs={
   }
 }
 
-let sendButton=document.getElementById('sendButton');
+let sendTextButton=document.getElementById('sendTextButton');
+let fileSelect=document.getElementById('fileSelect');
+let shareFileButton=document.getElementById('shareFileButton');
 let msgDiv=document.getElementById('msgframe');
 let msgInput=document.getElementById('textinput');
 let nameNode=document.getElementById('nickname');
 let peers={};
+let sharedFiles={};
 
+
+//----------- text messages
 function sendText() {
   let msg=msgInput.value;
   if (msg.length>0) {
@@ -49,10 +54,71 @@ function appendMessage(name,msg) {
   if (b) msgDiv.scrollTop=msgDiv.scrollHeight;
 }
 
-sendButton.onclick=function() {
+sendTextButton.onclick=function() {
   sendText();
   msgInput.focus();
 }
+
+//------------- file sharing
+//fileSelect.addEventListener('change',onFileSelectChange,false);
+function onFileSelectChange(event) {
+  //console.log('onFileSelectChange',event);
+}
+
+fileSelect.onchange=onFileSelectChange;
+
+function randStr(len) {
+  const t='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let s='';
+  for (let i=0;i<len;i++) {
+    s+=t[Math.floor(Math.random()*62)];
+  }
+  return s;
+}
+
+function shareFile() {
+  let f=fileSelect.files[0];
+  if (f.length==0) return;
+  let id=randStr(8);
+  while (sharedFiles.hasOwnProperty(id)) {
+    id=randStr(8);
+  }
+  sharedFiles[id]=f;
+  let fileinfo={
+    id:id,
+    name:f.name,
+    size:f.size,
+    type:f.type,
+    lastModified:f.lastModified
+  }
+  for (let i in peers) {
+    peers[i].sendFileInfo(fileinfo);
+  }
+}
+
+shareFileButton.addEventListener('click',shareFile,false);
+
+function appendFileInfo(name,info,func) {
+  let b=(msgDiv.scrollTop+msgDiv.offsetHeight+20>=msgDiv.scrollHeight);
+  let t=new Date();
+  let div=document.createElement('div');
+  div.setAttribute('class','msgentry');
+  div.innerHTML=`
+    <div class='msgnickname'>${name}</div>
+    <div class='msgtime'>${t.toLocaleTimeString()}</div>
+    <div class='msgfileinfo'>
+      <div class='info_filename'>${info.name}</div>
+      <div class='info_filename'>${info.size}</div>
+    </div>`;
+  let button=document.createElement('button');
+  button.addEventListener('click',func,false);
+  button.innerText='Download';
+  div.append(button);
+  msgDiv.append(div);
+  if (b) msgDiv.scrollTop=msgDiv.scrollHeight;
+}
+
+shareFileButton.addEventListener('click',null);
 
 class Peer {
   constructor(remoteId,peerNickname) {
@@ -68,6 +134,7 @@ class Peer {
       this.sch.onclose= () => this.onDataChannelClose();
       this.peerNickname=peerNickname;
       this.remoteId=remoteId;
+      this.freqlist={};
     } catch (e) {
       console.log(e);
     }
@@ -82,31 +149,146 @@ class Peer {
     }
   }
 
+  //------------------ data channel
   onDataChannelOpen() {
-  }
-
-  sendText(text) {
-    this.sch.send(text);
   }
 
   onDataChannelClose() {
   }
 
   onDataChannel(event) {
+    let ch=event.channel;
+    if (this.freqlist.hasOwnProperty(ch.label)) {
+      this.receiveFile(this.freqlist[ch.label],ch);
+      return;
+    }
     this.rch=event.channel;
     this.rch.onmessage= (event) => this.onDataChannelMessage(event);
     //console.log('onDataChannel',event);
   }
 
   onDataChannelMessage(event) {
-    appendMessage(this.peerNickname,event.data);
+    let msg=JSON.parse(event.data);
+    switch (msg.type) {
+      case 'text':
+        appendMessage(this.peerNickname,msg.text);
+        break;
+      case 'fileinfo':
+        appendFileInfo(this.peerNickname,msg.fileinfo,() => {
+          this.requestFile(msg.fileinfo);
+          //console.log('Download clicked.');
+          //clicked func
+        });
+        break;
+      case 'filereq':
+        if (!sharedFiles.hasOwnProperty(msg.fileid)) {
+          this.sendMessage({type:'filerep',error:'not found'});
+        } else if (sharedFiles[msg.fileid].size==0) {
+          this.sendMessage({type:'filerep',error:'file is empty'});
+        }else {
+          this.sendFile(msg);
+        }
+      case 'filerep':
+        break;
+    }
     //console.log('onDataChannelMessage',event);
+  }
+
+  receiveFile(fileinfo,channel) {
+    let receiveBuffer=[],receivedSize=0;
+    function saveBlob(blob,filename) {
+      let a=document.createElement('a');
+      document.body.appendChild(a);
+      let url=window.URL.createObjectURL(blob);
+      a.href=url;
+      a.download=filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    }
+    channel.onmessage= (event) => {
+      receiveBuffer.push(event.data);
+      receivedSize+=event.data.byteLength;
+      if (receivedSize==fileinfo.size) {
+        const received=new Blob(receiveBuffer);
+        receiveBuffer=[];
+        saveBlob(received,fileinfo.name);
+      }
+    };
+
+  }
+
+  sendData(file,channel) {
+    const chunkSize = 16384;
+    console.log('start sending file',file);
+    let fr=new FileReader();
+    let offset=0;
+    fr.addEventListener('error', error => console.error('error reading file:', error));
+    fr.addEventListener('abort', event => console.log('file reading aborted:', event));
+    fr.addEventListener('load', e => {
+      console.log('FileRead.onload ', e);
+      channel.send(e.target.result);
+      offset += e.target.result.byteLength;
+      if (offset < file.size) {
+        readSlice(offset);
+      }
+    });
+    const readSlice = o => {
+      //console.log('readSlice ', o);
+      const slice = file.slice(o, o + chunkSize);
+      fr.readAsArrayBuffer(slice);
+    };
+    readSlice(0);
+  }
+
+  sendFile(req) {
+    let tempch=this.conn.createDataChannel(req.reqid);
+    tempch.addEventListener('error',
+      error => console.error('error in tempch:', error));
+    tempch.addEventListener('open', () => {
+      this.sendData(sharedFiles[req.fileid],tempch);
+    });
+  }
+
+  requestFile(fileinfo) {
+    let f=this.freqlist,id=randStr(8);
+    while (f.hasOwnProperty(id)) {
+      id=randStr(8);
+    }
+    f[id]=fileinfo;
+    let msg={
+      type:'filereq',
+      fileid:fileinfo.id,
+      reqid:id
+    };
+    this.sendMessage(msg);
+  }
+  //----------------- send functions
+  sendText(text) {
+    let message={
+      type:'text',
+      text:text
+    }
+    this.sendMessage(message);
+  }
+
+  sendFileInfo(fileinfo) {
+    let message={
+      type:'fileinfo',
+      fileinfo:fileinfo
+    }
+    this.sendMessage(message);
+  }
+
+  sendMessage(message) {
+    this.sch.send(JSON.stringify(message));
   }
 
   onNegotiationNeeded(event) {
     //console.log('onNegotiationNeeded',event);
   }
 
+  //----------------- ice related
   onIceCandidate(event) {
     //console.log('icecandidate event: ', event);
     if (event.candidate) {
@@ -129,6 +311,7 @@ class Peer {
     this.conn.addIceCandidate(candidate);
   }
 
+  //-------------  start a session 
   initiateSession(options=null) {
     console.log('send offer');
     this.conn.createOffer(options)

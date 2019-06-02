@@ -15,9 +15,11 @@
 
   <span id='nickname'>無名氏</span>
   <input type="text" id="textinput">
-  <button id='sendButton'>Send</button>
-  <div></div>
-  <!-- <input type="file" name=""> -->
+  <button id='sendTextButton'>Send</button>
+  <div><br></div>
+  <input type="file" id='fileSelect' class="fileselector">
+  <button id='shareFileButton'>Share File</button>
+  <div id='fileListDiv'></div>
   <!-- This file is automatically added/served when running "node index.js". -->
   <script src="/socket.io/socket.io.js"></script>
   <!-- <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script> -->
