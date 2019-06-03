@@ -373,7 +373,7 @@ let signaling = {
 
     socket.on('join', (info) => {
       const msg=`${info.id} joined room ${info.room} as ${info.name}`;
-      appendMessage('server',msg)
+      appendMessage('server',`${info.name} joined.`)
       console.log(msg);
       this.members[info.id]=info.name;
       let peer=new Peer(info.id,info.name);
