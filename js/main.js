@@ -372,7 +372,9 @@ let signaling = {
     });
 
     socket.on('join', (info) => {
-      console.log(`${info.id} joined room ${info.room} as ${info.name}`);
+      const msg=`${info.id} joined room ${info.room} as ${info.name}`;
+      appendMessage('server',msg)
+      console.log(msg);
       this.members[info.id]={name:info.name};
       let peer=new Peer(info.id,info.name);
       peers[info.id]=peer;
@@ -380,7 +382,9 @@ let signaling = {
     });
 
     socket.on('leave', (info) => {
-      console.log(`${this.members[info.id]} left room ${info.room}.`);
+      msg=`${this.members[info.id]} left room ${info.room}.`;
+      appendMessage('server',msg)
+      console.log(msg);
       delete this.members[info.id];
     });
 
