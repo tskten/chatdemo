@@ -375,14 +375,14 @@ let signaling = {
       const msg=`${info.id} joined room ${info.room} as ${info.name}`;
       appendMessage('server',msg)
       console.log(msg);
-      this.members[info.id]={name:info.name};
+      this.members[info.id]=info.name;
       let peer=new Peer(info.id,info.name);
       peers[info.id]=peer;
       peer.initiateSession();
     });
 
     socket.on('leave', (info) => {
-      msg=`${this.members[info.id]} left room ${info.room}.`;
+      const msg=`${this.members[info.id]} left room ${info.room}.`;
       appendMessage('server',msg)
       console.log(msg);
       delete this.members[info.id];
