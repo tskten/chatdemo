@@ -386,6 +386,7 @@ let signaling = {
       appendMessage('server',msg)
       console.log(msg);
       delete this.members[info.id];
+      delete peers[info.id];
     });
 
     socket.on('log', (array) => {
