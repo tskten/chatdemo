@@ -94,15 +94,22 @@ function shareFile() {
   for (let i in peers) {
     peers[i].sendFileInfo(fileinfo);
   }
+  appendFileInfo(signaling.name,fileinfo,() => {
+    document.getElementById(`${signaling.name}:${id}`).remove();
+  },'Cancel')
 }
 
-shareFileButton.addEventListener('click',shareFile,false);
+shareFileButton.addEventListener('click', () => {
+  shareFile();
+  shareFileButton.value=null;}
+  ,false);
 
-function appendFileInfo(name,info,func) {
+function appendFileInfo(name,info,func,buttonText='Download') {
   let b=(msgDiv.scrollTop+msgDiv.offsetHeight+20>=msgDiv.scrollHeight);
   let t=new Date();
   let div=document.createElement('div');
   div.setAttribute('class','msgentry');
+  div.setAttribute('id',`${name}:${info.id}`);
   div.innerHTML=`
     <div class='msgnickname'>${name}</div>
     <div class='msgtime'>${t.toLocaleTimeString()}</div>
@@ -112,7 +119,7 @@ function appendFileInfo(name,info,func) {
     </div>`;
   let button=document.createElement('button');
   button.addEventListener('click',func,false);
-  button.innerText='Download';
+  button.innerText=buttonText;
   div.append(button);
   msgDiv.append(div);
   if (b) msgDiv.scrollTop=msgDiv.scrollHeight;
@@ -373,7 +380,7 @@ let signaling = {
     });
 
     socket.on('leave', (info) => {
-      console.log(`${this.members[info.id].name} left room ${info.room}.`);
+      console.log(`${this.members[info.id]} left room ${info.room}.`);
       delete this.members[info.id];
     });
 
