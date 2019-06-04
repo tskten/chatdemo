@@ -52,14 +52,14 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-
 let rooms={};
 
 class Room {
   constructor(name) {
     this.members={};
-    this.mids={};
+    this.nids={};
     this.name=name;
+    this.total=0;
     let id_pool=this.id_pool=[...Array(nicknames.length).keys()];
     for (let i=id_pool.length-1;i>0;i--) {
       let n=getRandomInt(0,i);
@@ -82,28 +82,34 @@ class Room {
   }
 
   join(socketId) {
-    let id=this.pickid();
-    if (id==-1) {
+    let nid=this.pickid();
+    if (nid==-1) {
       return null;
     }
-    this.mids[socketId]=id;
-    let n=nicknames[id];
-    this.members[socketId]=n;
-    return n;
+    this.nids[socketId]=nid;
+    const name=nicknames[nid];
+    this.members[socketId]=name;
+    this.total=Object.keys(this.members);
+    return name;
   }
 
   leave(socketId) {
     if (this.members.hasOwnProperty(socketId)) {
-      this.dropid(this.mids[socketId]);
-      delete this.mids[socketId];
+      this.dropid(this.nids[socketId]);
+      delete this.nids[socketId];
       delete this.members[socketId];
     }
+    this.total=Object.keys(this.members);
     if (Object.keys(this.members)==0)
       delete rooms[this.name];
   }
 
-  getnickname(socketId) {
+  getNickname(socketId) {
     return this.members[socketId];
+  }
+
+  get totalMembers() {
+    return this.total;
   }
 }
 
@@ -120,15 +126,20 @@ io.sockets.on('connection', function(socket) {
 
   /*
   socket.on('message', function(msg) {
-    let name=socket.nickname || socket.id;
-    log(`'message from ${name}:${msg}`);
+    //let name=socket.nickname || socket.id;
+    //log(`'message from ${name}:${msg}`);
     // for a real app, would be room-only (not broadcast)
-    socket.broadcast.emit('message', msg);
+    const m={
+      from:socket.id,
+      msg:msg
+    }
+    for (let room in rooms)
+      socket.to(room).emit('message', m);
   });//*/
 
-  socket.on('peerMsg', function(msg) {
+  socket.on('peer_message', function(msg) {
     //log(`peer message from ${socket.id} to ${msg.to}: ${JSON.stringify(msg.body)}`);
-    io.to(`${msg.to}`).emit('peerMsg', msg);
+    io.to(`${msg.to}`).emit('peer_message', msg);
   });
 
   socket.on('join', function(room) {
@@ -151,7 +162,7 @@ io.sockets.on('connection', function(socket) {
 
     let clientsInRoom = io.sockets.adapter.rooms[room];
     let numClients = clientsInRoom ? Object.keys(clientsInRoom.sockets).length : 0;
-    socket.to(room).emit('join',{
+    socket.to(room).emit('member_join',{
       room:room,
       name:nickname,
       total:numClients,
@@ -171,8 +182,12 @@ io.sockets.on('connection', function(socket) {
   function leave(room) {
     let clientsInRoom = io.sockets.adapter.rooms[room];
     let numClients = clientsInRoom ? Object.keys(clientsInRoom.sockets).length : 0;
-    rooms[room].leave(socket.id);
-    socket.to(room).emit('leave',{
+    let r=rooms[room];
+    r.leave(socket.id);
+    if (r.totalMembers==0) {
+      delete rooms[room];
+    }
+    socket.to(room).emit('member_leave',{
       room:room,
       id:socket.id,
       total:numClients

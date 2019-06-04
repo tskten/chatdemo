@@ -1,5 +1,7 @@
-body {
-  font-family: sans-serif;
+html,body {
+  height: 100%;
+  display: block;
+  margin: 0;
 }
 
 video {
@@ -7,45 +9,94 @@ video {
   width: 320px;
 }
 
+div {
+  position: relative;
+}
+
+#main {
+  margin: auto;
+  width: 400px;
+  height: 80%;
+  padding-top: 50px;
+}
+
+.darkred {
+  color:darkred;
+}
+
 #msgframe {
-    width: 400px;
-    height: 500px;
-    overflow-y: scroll;
-    background: lightgrey;
+  height: 100%;
+  overflow-y: scroll;
+  background-color: lightgray;
 }
 
 .msgentry {
-    padding: 5px;
+  margin: 5px;
+  padding: 5px;
+  background-color: lightgray;
 }
 
 .msgnickname {
-    display: inline-block;
-    width: 60px;
-    color: blue;
+  display: inline-block;
+  width: 60px;
+  color: blue;
 }
 
 .msgtime {
-    display: inline-block;
-    color: green;
+  display: inline-block;
+  color: green;
 }
 
 .msgcontent {
-    padding-left: 10px;
-    width: 360px
+  margin-left: 15px;
+  margin-right: 15px;
+}
+
+.msgfileinfo {
+  padding: 7px;
+  line-height: 18px;
+  text-align: right;
+  background-color: aliceblue;
+  font-family: monospace;
+}
+
+.fi_name {
+  text-align: left;
+}
+
+.dl_prog {
+  float: left;
+  top: 16px;
+  height: 5px;
+  width: 240px;
+  position: relative;
+}
+
+.dl_prog > span {
+  display: block;
+  height: 100%;
+  background-color: #2196f3;
 }
 
 #nickname {
-    display: inline-block;
-    text-align: center;
-    width: 60px;
+  display: inline-block;
+  text-align: center;
+  width: 60px;
 }
 
 #textinput {
-    width: 279px;
+  width: 279px;
+}
+
+button {
+  position: relative;
+  line-height: 16px;
+  text-align: center;
+  display: inline-block;
 }
 
 #sendButton {
-    padding-left: 5px;
-    padding-right: 5px;
-    width: 50px;
+  padding-left: 5px;
+  padding-right: 5px;
+  width: 50px;
 }
